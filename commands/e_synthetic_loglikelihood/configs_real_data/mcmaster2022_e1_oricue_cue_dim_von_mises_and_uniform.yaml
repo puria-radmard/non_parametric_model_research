@@ -1,0 +1,19 @@
+swap_type: cue_dim_only
+emission_type: von_mises
+remove_uniform: false
+include_pi_u_tilde: true
+num_training_examples: 5000
+M_test_per_set_size: 0
+
+
+
+logging_base: "/homes/pr450/repos/research_projects/error_modelling_torus/results_link/e_synthetic_likelihood_24_9_24/trained_on_data/mcmaster2022_e1_oricue_cue_AR2/cue_dim_only_von_mises_and_uniform"
+dataset_name: mcmaster2022_e1_oricue
+stim_strengths:
+- cue_AR2
+
+
+num_models: 1 # Just train one set of parameters but we will go on to generate many datasets...
+
+defaults_paths:
+- /homes/pr450/repos/all_utils/purias_utils/error_modelling_torus/non_parametric_error_model/default_bnp_and_training_params.yaml

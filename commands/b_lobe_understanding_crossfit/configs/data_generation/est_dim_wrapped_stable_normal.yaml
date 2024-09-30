@@ -1,0 +1,7 @@
+run_name: run_DATAGEN
+mean_function_scale: 1.0
+mean_function_offset: 0.0
+synthetic_data_code: cross_fit
+defaults_paths:
+- /homes/pr450/repos/all_utils/purias_utils/error_modelling_torus/non_parametric_error_model/default_bnp_and_training_params.yaml
+- /homes/pr450/repos/research_projects/error_modelling_torus/non_parametric_model/commands/a_trained_on_data/configs/mcmaster2022_e2_dircue_est_dim_wrapped_stable.yaml

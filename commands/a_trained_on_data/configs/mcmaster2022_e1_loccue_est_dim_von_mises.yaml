@@ -1,0 +1,11 @@
+logging_base: "/homes/pr450/repos/research_projects/error_modelling_torus/results_link/postbudapest2/trained_on_data/mcmaster2022_e1_loccue_cue_AR2/est_dim_von_mises_and_uniform"
+dataset_name: mcmaster2022_e1_loccue
+swap_type: est_dim_only
+emission_type: von_mises
+remove_uniform: false
+num_training_examples: 1000
+M_test_per_set_size: 150
+stim_strengths:
+- cue_AR2
+defaults_paths:
+- /homes/pr450/repos/all_utils/purias_utils/error_modelling_torus/non_parametric_error_model/default_bnp_and_training_params.yaml

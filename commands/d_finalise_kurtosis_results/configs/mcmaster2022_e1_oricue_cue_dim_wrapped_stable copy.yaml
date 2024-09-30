@@ -1,0 +1,14 @@
+logging_base: "/homes/pr450/repos/research_projects/error_modelling_torus/results_link/d_finalise_kurtosis_results_8_9_24/trained_on_data/mcmaster2022_e1_oricue_cue_AR2/cue_dim_only_wrapped_stable"
+dataset_name: mcmaster2022_e1_oricue
+swap_type: cue_dim_only
+emission_type: wrapped_stable
+remove_uniform: true
+include_pi_u_tilde: false
+num_training_examples: 1000
+M_test_per_set_size: 0  # 150
+
+
+stim_strengths:
+- cue_AR2
+defaults_paths:
+- /homes/pr450/repos/all_utils/purias_utils/error_modelling_torus/non_parametric_error_model/default_bnp_and_training_params.yaml

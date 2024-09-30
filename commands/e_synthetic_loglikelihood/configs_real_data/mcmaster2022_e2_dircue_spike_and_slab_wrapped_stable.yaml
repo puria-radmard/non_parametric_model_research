@@ -1,0 +1,20 @@
+swap_type: spike_and_slab
+emission_type: wrapped_stable
+remove_uniform: true
+include_pi_u_tilde: false
+num_training_examples: 700
+M_test_per_set_size: 0
+init_min_seps: false
+
+
+logging_base: "/homes/pr450/repos/research_projects/error_modelling_torus/results_link/e_synthetic_likelihood_24_9_24/trained_on_data/mcmaster2022_e2_dircue_medC/spike_and_slab_wrapped_stable"
+dataset_name: mcmaster2022_e2_dircue
+stim_strengths:
+- medC
+
+
+
+num_models: 1 # Just train one set of parameters but we will go on to generate many datasets...
+
+defaults_paths:
+- /homes/pr450/repos/all_utils/purias_utils/error_modelling_torus/non_parametric_error_model/default_bnp_and_training_params.yaml

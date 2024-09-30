@@ -1,0 +1,23 @@
+# For the est_dim_only and spike_and_slab models of mcmaster2022_e2_dircue_cue_AR2, generate various datasets
+
+# Just a super train on everything!
+
+export yaml_path=$1
+
+export NUMFOLDS=10
+
+for (( fl = 0; fl < $NUMFOLDS; fl++ )); do
+    python -m non_parametric_model.scripts.main.synthetic_data_generation -eap $yaml_path -rp "run_${fl}"
+done
+
+
+# non_parametric_model/commands/b_lobe_understanding_crossfit/configs/run_script_data_generation.sh non_parametric_model/commands/b_lobe_understanding_crossfit/configs/data_generation/est_dim_von_mises_normal.yaml
+# non_parametric_model/commands/b_lobe_understanding_crossfit/configs/run_script_data_generation.sh non_parametric_model/commands/b_lobe_understanding_crossfit/configs/data_generation/est_dim_wrapped_stable_normal.yaml
+# non_parametric_model/commands/b_lobe_understanding_crossfit/configs/run_script_data_generation.sh non_parametric_model/commands/b_lobe_understanding_crossfit/configs/data_generation/spike_and_slab_von_mises_normal.yaml
+# non_parametric_model/commands/b_lobe_understanding_crossfit/configs/run_script_data_generation.sh non_parametric_model/commands/b_lobe_understanding_crossfit/configs/data_generation/spike_and_slab_wrapped_stable_normal.yaml
+# non_parametric_model/commands/b_lobe_understanding_crossfit/configs/run_script_data_generation.sh non_parametric_model/commands/b_lobe_understanding_crossfit/configs/data_generation/est_dim_von_mises_delobed_flat.yaml
+# non_parametric_model/commands/b_lobe_understanding_crossfit/configs/run_script_data_generation.sh non_parametric_model/commands/b_lobe_understanding_crossfit/configs/data_generation/est_dim_von_mises_delobed_linear.yaml
+# non_parametric_model/commands/b_lobe_understanding_crossfit/configs/run_script_data_generation.sh non_parametric_model/commands/b_lobe_understanding_crossfit/configs/data_generation/est_dim_von_mises_delobed_remove.yaml
+# non_parametric_model/commands/b_lobe_understanding_crossfit/configs/run_script_data_generation.sh non_parametric_model/commands/b_lobe_understanding_crossfit/configs/data_generation/est_dim_wrapped_stable_delobed_flat.yaml
+# non_parametric_model/commands/b_lobe_understanding_crossfit/configs/run_script_data_generation.sh non_parametric_model/commands/b_lobe_understanding_crossfit/configs/data_generation/est_dim_wrapped_stable_delobed_linear.yaml
+# non_parametric_model/commands/b_lobe_understanding_crossfit/configs/run_script_data_generation.sh non_parametric_model/commands/b_lobe_understanding_crossfit/configs/data_generation/est_dim_wrapped_stable_delobed_remove.yaml

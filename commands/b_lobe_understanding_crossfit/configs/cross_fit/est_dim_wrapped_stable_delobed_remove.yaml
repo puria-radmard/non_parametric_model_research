@@ -1,0 +1,10 @@
+logging_base: "/homes/pr450/repos/research_projects/error_modelling_torus/results_link/postbudapest2/model_recovery/mcmaster2022_e2_dircue_cue_AR2/est_dim_wrapped_stable/recovering_delobed_remove"
+run_name: run
+synthetic_data_code: delobed_remove
+synthetic_data_root: "/homes/pr450/repos/research_projects/error_modelling_torus/results_link/postbudapest2/trained_on_data/mcmaster2022_e2_dircue_cue_AR2/est_dim_wrapped_stable"
+dataset_name: cross_model_fit
+underlying_dataset: mcmaster2022_e2_dircue
+defaults_paths:
+- /homes/pr450/repos/all_utils/purias_utils/error_modelling_torus/non_parametric_error_model/default_bnp_and_training_params.yaml
+- /homes/pr450/repos/research_projects/error_modelling_torus/non_parametric_model/commands/a_trained_on_data/configs/mcmaster2022_e2_dircue_est_dim_wrapped_stable.yaml
+

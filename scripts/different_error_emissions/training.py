@@ -165,7 +165,6 @@ for batch_N, batch_M, deltas_batch, errors_batch, metadata_batch, batch_indices 
         recent_losses = {
             "recent_naive_log_likelihoods": recent_naive_log_likelihoods,   # This is for saving so all model repeats
         }
-        warnings.warn('still saving outdated loglikelihood estimates!')
         np.save(os.path.join(logging_directory, "recent_losses.npy"), recent_losses)
         print()
 

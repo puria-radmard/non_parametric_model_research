@@ -6,31 +6,31 @@ from non_parametric_model.scripts.main.setup import *
 from purias_utils.maths.circular_statistics import kurtosis_from_angles, mean_resultant_length_from_angles
 
 from purias_utils.util.plotting import lighten_color, legend_without_repeats, standard_swap_model_simplex_plots
-
 from purias_utils.util.logging import configure_logging_paths
+
+from purias_utils.error_modelling_torus.data_utils.loading_utils import dump_training_indices_to_path
 
 from itertools import chain
 import matplotlib.pyplot as plt
+import matplotlib.gridspec as gridspec
 
 MINIBATCH_SIZE = args.M_batch_mini
 try_residuals = True
 
 
 lines_cmap = ['b','y','g','r','c','m','y','peru']
-lines_cmap_alt = ['purple','orange']
+lines_cmap_alt = ['navy','orange','lime','maroon','teal','purple','gold','chocolate']
 
 
 ################ a little bit more setup ##############
 Path(args.logging_base).mkdir(parents = True, exist_ok = True)
 logging_directory = os.path.join(args.logging_base, args.run_name)
-
-print_path, logging_directory, _ = configure_logging_paths(logging_directory, index_new=True)
+[training_print_path, testing_print_path], logging_directory, _ = configure_logging_paths(logging_directory, log_suffixes=["train", "full"], index_new=True)
 dump_training_indices_to_path(dataset_generator, logging_directory)
 
 parameter_save_path = os.path.join(logging_directory, '{model}.{ext}')
 
-import pdb; pdb.set_trace(header = 'Add importance sampled version here and elsewhere')
-with open(print_path, 'a') as f:
+with open(training_print_path, 'a') as f:
     header_row = [
         "Progress",
         "batch_N",
@@ -38,11 +38,23 @@ with open(print_path, 'a') as f:
         "avg_llh_term",
         "kl_term",
         "distance_loss",
-        "avg_test_llh_term",
     ]
     print(*header_row, "elapsed", "remaining", sep = '\t', file=f)
 
-args.set_size_to_M_train_each = dataset_generator.set_size_to_M_train_each
+with open(testing_print_path, 'a') as f:
+    header_row = [
+        "Progress",
+        "set_size",
+        "avg_train_set_naive_likelihood",
+        "avg_test_set_naive_likelihood",
+        "avg_train_set_importance_sampled_likelihood",
+        "avg_test_set_importance_sampled_likelihood",
+    ]
+    if track_fmse:
+        header_row.append("scaled_W_distance_on_distance")
+    print(*header_row, sep = '\t', file=f)
+
+args.dict['set_size_to_M_train_each'] = ConfigNamepace({str(k): v for k, v in dataset_generator.set_size_to_M_train_each.items()})
 
 args.write_to_yaml(os.path.join(logging_directory, 'args.yaml'))
 
@@ -52,11 +64,13 @@ with open(os.path.join(logging_directory, 'cmd.txt'), 'w') as f:
 
 
 
-
 ################ training loop ##############
 t = -1
 
-for batch_N, batch_M, deltas_batch, errors_batch, batch_indices in dataset_generator.iterate_train_batches(dimensions = delta_dimensions, shuffle = True, total = T):
+for batch_N, batch_M, deltas_batch, errors_batch, *_ in dataset_generator.iterate_train_batches(dimensions = delta_dimensions, shuffle = True, total = T):
+
+    errors_batch = errors_batch.to('cuda')
+    deltas_batch = deltas_batch.to('cuda')
 
     t+=1
     
@@ -80,86 +94,107 @@ for batch_N, batch_M, deltas_batch, errors_batch, batch_indices in dataset_gener
     distance_loss = torch.relu(training_info['distance_loss'] - args.distance_loss_threshold)
     total_loss += args.distance_loss_weight * distance_loss
 
+    total_loss.sum().backward()
+    opt.step()
+
+    torch.cuda.empty_cache()
+
     training_step_per_set_size[batch_N].append(t)
     
-    iN = all_set_sizes.index(batch_N)   # set size index
-    all_kl_losses_per_set_size[t, :, iN] = training_info['kl_term'].detach().cpu()
-    all_dist_losses_per_set_size[t, :, iN] = distance_loss.detach().cpu()
-    all_average_llh_losses_per_set_size[t, :, iN] = training_info['total_log_likelihood'].detach().cpu() / batch_M
-    all_average_elbos_per_set_size[t, :, iN] = total_elbo.detach().cpu() / batch_M
-
-    # if M_batch < 1:
-    #     #### Easy access to each repeat's performance on training set
-    #     recent_train_sizes[batch_N] = batch_M
-    #     recent_train_llh[batch_N] = training_info['total_log_likelihood'].detach().cpu().numpy()    # [Q]
-    #     recent_component_posteriors[batch_N] = training_info['posterior'].detach().cpu().numpy()    # [Q, M, N+1]
-    #     recent_component_priors[batch_N] = training_info['priors'].detach().cpu().numpy()           # [Q, M, N+1]
-
-    if t % testing_frequency == 0:
+    batch_N_index = all_set_sizes.index(batch_N)   # set size index
+    all_kl_losses_per_set_size[t, :, batch_N_index] = training_info['kl_term'].detach().cpu()
+    all_dist_losses_per_set_size[t, :, batch_N_index] = distance_loss.detach().cpu()
+    all_average_llh_losses_per_set_size[t, :, batch_N_index] = training_info['total_log_likelihood'].detach().cpu() / batch_M
+    all_average_elbos_per_set_size[t, :, batch_N_index] = total_elbo.detach().cpu() / batch_M
+    
+    if t % testing_frequency == 0 and t > 0:
 
         test_save_steps.append(t)
 
-        import pdb; pdb.set_trace(header = 'Turn this into doing naive and importance sampled llh estimtes for all the items, then separating per training indices *just* for plotting/printing, but keeping it all together for recent_losses.json')
-
-        #### Performance on test set
-
-        with torch.no_grad():
+        for iN, set_size in enumerate(all_set_sizes):
             
-            test_llh_terms, total_test_Ms = [{N: 0.0 for N in all_set_sizes} for _ in range(2)]
-            total_test_llh = 0.0
+            dg = dataset_generator.data_generators[set_size]
+            all_dataset_errors = dg.all_errors.to('cuda')                                                                                              # [Q, M, N]
+            all_dataset_relevant_deltas = dg.all_deltas[...,delta_dimensions].unsqueeze(0).repeat(swap_model.num_models, 1, 1, 1).to('cuda')           # [Q, M, N, D]
+            with torch.no_grad():
+                test_time_inference_info = swap_model.get_elbo_terms(all_dataset_relevant_deltas, all_dataset_errors, max_variational_batch_size=MINIBATCH_SIZE, return_kl=False)
+                # if swap_type != 'spike_and_slab':
+                #     test_time_likelihood_estimates = swap_model.refined_likelihood_estimate(all_dataset_errors, all_dataset_relevant_deltas, dg.train_indices, max_variational_batch_size=MINIBATCH_SIZE) 
+                # else:
+                #     test_time_likelihood_estimates = {'importance_sampled_log_likelihoods': torch.nan * torch.ones_like(test_time_inference_info['likelihood_per_datapoint'])}
 
-            for test_batch_N, test_batch_M, test_deltas_batch, test_errors_batch, test_batch_indices in dataset_generator.all_test_batches(dimensions = delta_dimensions):
+            recent_naive_log_likelihoods[set_size] = test_time_inference_info['likelihood_per_datapoint']          # each [Q, M]
+            # recent_importance_sampled_log_likelihoods[set_size] = test_time_likelihood_estimates['importance_sampled_log_likelihoods']
+            recent_component_priors[set_size] = test_time_inference_info['priors'].cpu().numpy()
 
-                test_info = swap_model.get_elbo_terms(test_deltas_batch, test_errors_batch, max_variational_batch_size=MINIBATCH_SIZE, return_kl=False)
+            all_average_train_set_naive_log_likelihoods[len(test_save_steps)-1,:,iN], all_average_test_set_naive_log_likelihoods[len(test_save_steps)-1,:,iN] = \
+                dg.separate_to_test_and_train(recent_naive_log_likelihoods[set_size].cpu(), average_over_data = True)
+            # all_average_train_set_importance_sampled_log_likelihoods[len(test_save_steps)-1,:,iN], all_average_test_set_importance_sampled_log_likelihoods[len(test_save_steps)-1,:,iN] = \
+            #     dg.separate_to_test_and_train(recent_importance_sampled_log_likelihoods[set_size].cpu(), average_over_data = True)
 
-                test_llh_terms[test_batch_N] += test_info['llh_term'].item()
-                total_test_Ms[test_batch_N] += test_batch_M
+            if track_fmse:
+                assert fix_non_swap
+                print('track_fmse requires fix_non_swap for now!')
 
-        total_test_count = 0.0
-        for iN, ss in enumerate(all_set_sizes):
-            kN_test_count = total_test_Ms[ss] 
-            new_llh = test_llh_terms[ss] / (kN_test_count if kN_test_count > 0 else 1)
-            if kN_test_count == 0.0:
-                new_llh = np.nan
-            
-            test_llh_losses_per_set_size[len(test_save_steps), :, iN] = new_llh
+                with torch.no_grad():
+                    scaled_fmse = (
+                        np.square(test_time_inference_info['mean_surface'].cpu()[...,1:] - true_mean_surfaces_dict[set_size][...,1:]) +
+                        (
+                            test_time_inference_info['std_surface'].cpu().square()[...,1:] + np.square(true_std_surfaces_dict[set_size])[...,1:]
+                            - 2*(test_time_inference_info['std_surface'].cpu()[...,1:] * true_std_surfaces_dict[set_size][...,1:])
+                        )
+                    )
+                    aggregated_scaled_fmse = scaled_fmse.reshape(scaled_fmse.shape[0], -1).sqrt().mean(1) # all terms here of shape [Q, M, N-1] -> [Q]
+                    all_scaled_rmse_from_true_confusion_function[len(test_save_steps)-1,:,iN] = aggregated_scaled_fmse
 
-            total_test_count += kN_test_count
+            with open(testing_print_path, 'a') as f:
+                new_print_row = [
+                    f"{t + 1}/{T}",                                                                                                 # Progress
+                    set_size,                                                                                                       # set_size
+                    round(all_average_train_set_naive_log_likelihoods[len(test_save_steps)-1,:,iN].mean(), 6),                      # avg_train_set_naive_likelihood
+                    round(all_average_test_set_naive_log_likelihoods[len(test_save_steps)-1,:,iN].mean(), 6),                       # avg_test_set_naive_likelihood
+                    round(all_average_train_set_importance_sampled_log_likelihoods[len(test_save_steps)-1,:,iN].mean(), 6),         # avg_train_set_importance_sampled_likelihood
+                    round(all_average_test_set_importance_sampled_log_likelihoods[len(test_save_steps)-1,:,iN].mean(), 6),          # avg_test_set_importance_sampled_likelihood
+                ]
+                if track_fmse:
+                    new_print_row.append(
+                        round(all_scaled_rmse_from_true_confusion_function[len(test_save_steps)-1,:,iN].mean(), 6)
+                    )
+                print(*new_print_row, sep = '\t', file=f)
 
-        if total_test_count == 0.0:
-            total_test_llh = np.nan
-        
+            if try_residuals:
+                try:
+                    residual_estimation_weights_on_whole_dataset = swap_model.generative_model.empirical_residual_distribution_weights(test_time_inference_info['posterior'], all_dataset_errors)
+                    new_mrv = mean_resultant_length_from_angles(all_dataset_errors, residual_estimation_weights_on_whole_dataset['particle_weights_total'])
+                    new_ckr = kurtosis_from_angles(all_dataset_errors, residual_estimation_weights_on_whole_dataset['particle_weights_total'])
 
-    if t % testing_frequency == 0 and M_batch <= 0 and try_residuals:
+                    recent_particle_uniform_weights[set_size] = residual_estimation_weights_on_whole_dataset['particle_weights_uniform']        # [total M, N]
+                    recent_particle_non_uniform_weights[set_size] = residual_estimation_weights_on_whole_dataset['particle_weights_non_uniform']    # [total M, N]
+                    recent_particle_mean_first_resultant_vector_lengths[set_size] = new_mrv # float
+                    recent_particle_circular_kurtosis[set_size] = new_ckr   # float
+                except Exception as e:
+                    print(f'Too much to evaluate particle residual! {e}')
+                    try_residuals = False
+                    break
+            else:
+                recent_particle_uniform_weights[set_size] = None
+                recent_particle_non_uniform_weights[set_size] = None
+                recent_particle_mean_first_resultant_vector_lengths[set_size] = None
+                recent_particle_circular_kurtosis[set_size] = None
 
-        total_test_llh = np.nan
-        total_test_count = np.nan
+        recent_losses = {
+            "recent_naive_log_likelihoods": recent_naive_log_likelihoods,
+            # "recent_importance_sampled_log_likelihoods": recent_importance_sampled_log_likelihoods,
+            "residual_distribution": {
+                "particle_non_uniforn_weights": recent_particle_non_uniform_weights,
+                "particle_uniform_weights": recent_particle_uniform_weights,
+                "particle_mean_first_resultant_vector_lengths": recent_particle_mean_first_resultant_vector_lengths,
+                "particle_circular_kurtosis": recent_particle_circular_kurtosis
+            } if try_residuals else 'residuals too expensive to compute!',
+        }
 
-        #### Now iterate over all set sizes, and evaluate residual estimation for each of them
-        for (set_size, dg) in dataset_generator.data_generators.items():
+        np.save(os.path.join(logging_directory, "recent_losses.npy"), recent_losses)
 
-            all_dataset_errors = dg.all_errors                                                                                              # [Q, M, N]
-            all_dataset_relevant_deltas = dg.all_deltas[...,delta_dimensions].unsqueeze(0).repeat(swap_model.num_models, 1, 1, 1)     # [Q, M, N, D]
-
-            inference_info = swap_model.get_elbo_terms(all_dataset_relevant_deltas, all_dataset_errors, max_variational_batch_size=MINIBATCH_SIZE, return_kl=False)
-
-            try:
-                residual_estimation_weights_on_whole_dataset = swap_model.generative_model.empirical_residual_distribution_weights(inference_info['posterior'], all_dataset_errors)
-                new_mrv = mean_resultant_length_from_angles(all_dataset_errors, residual_estimation_weights_on_whole_dataset['particle_weights_total'])
-                new_ckr = kurtosis_from_angles(all_dataset_errors, residual_estimation_weights_on_whole_dataset['particle_weights_total'])
-
-                recent_particle_uniform_weights[set_size] = residual_estimation_weights_on_whole_dataset['particle_weights_uniform']        # [total M, N]
-                recent_particle_non_uniform_weights[set_size] = residual_estimation_weights_on_whole_dataset['particle_weights_non_uniform']    # [total M, N]
-                recent_particle_mean_first_resultant_vector_lengths[set_size] = new_mrv # float
-                recent_particle_circular_kurtosis[set_size] = new_ckr   # float
-            except Exception as e:
-                print(f'Too much to evaluate particle residual! {e}')
-                try_residuals = False
-                break
-
-
-    total_loss.sum().backward()
-    opt.step()
     #############################################
 
 
@@ -185,9 +220,9 @@ for batch_N, batch_M, deltas_batch, errors_batch, batch_indices in dataset_gener
     if (args.emission_type == 'residual_deltas') and (t % args.residual_deltas_update_frequencey == 0):
         # Log and update residual deltas based on (recycled) result of inference...
 
-        most_recent_emission_weights_and_locations = {}
-
         raise Exception('Update for general (uniform included) case')
+
+        most_recent_emission_weights_and_locations = {}
         
         for ss in recent_delta_distributions.keys():
         
@@ -209,7 +244,7 @@ for batch_N, batch_M, deltas_batch, errors_batch, batch_indices in dataset_gener
             all_emissions_parameters[t,:,iN,:] = swap_model.generative_model.error_emissions.emission_parameter(ss).detach().cpu()
 
 
-    if (t % logging_frequency == 0):
+    if (t % logging_frequency == 0) and t > 0:
 
         plt.close('all')
         torch.save(swap_model.state_dict(), parameter_save_path.format(model = 'swap_model', ext = 'mdl'))
@@ -218,15 +253,14 @@ for batch_N, batch_M, deltas_batch, errors_batch, batch_indices in dataset_gener
         #    torch.save(most_recent_emission_weights_and_locations, parameter_save_path.format(model = 'generative_model_emission_histogram', ext = 'data'))
 
 
-
         ################ visualise loss #############
         training_curves_save_path = os.path.join(logging_directory, 'ELBO_optimisation_losses.png')
         fig_losses, axes = plt.subplots(2, 2, figsize = (20, 20))
 
         axes[0,0].set_title('kl term (down)')
         axes[0,1].set_title('thresholded inducing point distance loss (down)')
-        axes[1,0].set_title('llh term (up) - averaged over displays')
-        axes[1,1].set_title('total ELBO (up) - averaged over displays')
+        axes[1,0].set_title('Training quantities (up) - per item')
+        axes[1,1].set_title('Various loglikelihood estimates - per item')
 
         for iN, ss in enumerate(all_set_sizes):
 
@@ -234,13 +268,16 @@ for batch_N, batch_M, deltas_batch, errors_batch, batch_indices in dataset_gener
 
             axes[0,0].plot(*list(chain.from_iterable(zip(scalar_plot_x_axis[:,training_steps], all_kl_losses_per_set_size[training_steps,:,iN].T))), label = f'N={ss}', c = lines_cmap[iN])
             axes[0,1].plot(*list(chain.from_iterable(zip(scalar_plot_x_axis[:,training_steps], all_dist_losses_per_set_size[training_steps,:,iN].T))), label = f'N={ss}', c = lines_cmap[iN])
-            axes[1,0].plot(*list(chain.from_iterable(zip(scalar_plot_x_axis[:,training_steps], all_average_llh_losses_per_set_size[training_steps,:,iN].T))), label = f'train N={ss}', c = lines_cmap[iN])
-            axes[1,1].plot(*list(chain.from_iterable(zip(scalar_plot_x_axis[:,training_steps], all_average_elbos_per_set_size[training_steps,:,iN].T))), label = f'train N={ss}', c = lines_cmap[iN])
-            
-            if M_batch > 0:
-                axes[1,0].plot(*list(chain.from_iterable(zip(scalar_plot_x_axis[:,training_steps], test_llh_losses_per_set_size[training_steps,:,iN].T))), label = f'test N={ss}', c = lines_cmap[iN])
-        
+            axes[1,0].plot(*list(chain.from_iterable(zip(scalar_plot_x_axis[:,training_steps], all_average_llh_losses_per_set_size[training_steps,:,iN].T))), label = f'(Naive) llh, N={ss}', c = lines_cmap[iN])
+            axes[1,0].plot(*list(chain.from_iterable(zip(scalar_plot_x_axis[:,training_steps], all_average_elbos_per_set_size[training_steps,:,iN].T))), label = f'Total ELBO, N={ss}', c = lines_cmap[iN])
+
+            train_col = axes[1,1].plot(test_save_steps, all_average_train_set_naive_log_likelihoods[:len(test_save_steps),:,iN], label = f'naive_log_likelihoods, train, N = {ss}', linestyle = '-')[0].get_color()
+            axes[1,1].plot(test_save_steps, all_average_train_set_importance_sampled_log_likelihoods[:len(test_save_steps),:,iN], label = f'importance_sampled_log_likelihoods, train, N = {ss}', linestyle = '--', c = train_col)
+            test_col = axes[1,1].plot(test_save_steps, all_average_test_set_naive_log_likelihoods[:len(test_save_steps),:,iN], label = f'naive_log_likelihoods, test, N = {ss}', linestyle = '-')[0].get_color()
+            axes[1,1].plot(test_save_steps, all_average_test_set_importance_sampled_log_likelihoods[:len(test_save_steps),:,iN], label = f'importance_sampled_log_likelihoods, test, N = {ss}', linestyle = '--', c = test_col)
+
         legend_without_repeats(axes[0,0])
+        legend_without_repeats(axes[0,1])
         legend_without_repeats(axes[1,0])
         legend_without_repeats(axes[1,1])
 
@@ -262,7 +299,8 @@ for batch_N, batch_M, deltas_batch, errors_batch, batch_indices in dataset_gener
 
             for iN, ss in enumerate(all_set_sizes):
                 for d in range(D):
-                    axes[0,0].plot(*list(chain.from_iterable(zip(scalar_plot_x_axis[:,:t+1], all_inverse_ells[:t+1,:,iN,d].T))), label = f'N = {ss}, d={d}', c = lines_cmap[iN])
+                    inverse_ell_color = lines_cmap[iN] if d == 0 else lines_cmap_alt[iN] if d == 1 else 'asdf'
+                    axes[0,0].plot(*list(chain.from_iterable(zip(scalar_plot_x_axis[:,:t+1], all_inverse_ells[:t+1,:,iN,d].T))), label = f'N = {ss}, d={d}', c = inverse_ell_color)
                 axes[1,0].plot(*list(chain.from_iterable(zip(scalar_plot_x_axis[:,:t+1], all_scalers[:t+1,:,iN].T))), label = f'N = {ss}', c = lines_cmap[iN])
                 if (not remove_uniform) and include_pi_u_tilde:
                     axes[0,1].plot(*list(chain.from_iterable(zip(scalar_plot_x_axis[:,:t+1], all_pi_u_tildes[:t+1,:,iN].T))), label = '$\\tilde{\pi}_u$' + f', N = {ss}', c = lines_cmap_alt[iN])
@@ -307,14 +345,14 @@ for batch_N, batch_M, deltas_batch, errors_batch, batch_indices in dataset_gener
         ##########################################################
         for i_ss, set_size in enumerate(all_set_sizes):
 
-            grid_count = 100
+            grid_count = 100 if D == 1 else 50
 
-            example_deltas_batch = dataset_generator.data_generators[set_size].all_deltas[[0]][...,delta_dimensions].unsqueeze(0).repeat(swap_model.generative_model.num_models, 1, 1, 1)
-            example_target_zetas_batch = dataset_generator.data_generators[set_size].all_target_zetas[[0]]
+            example_deltas_batch = dataset_generator.data_generators[set_size].all_deltas[[0]][...,delta_dimensions].unsqueeze(0).repeat(swap_model.generative_model.num_models, 1, 1, 1).cuda()
+            example_target_zetas_batch = dataset_generator.data_generators[set_size].all_target_zetas[[0]].cuda()
             theta_axis, pdfs = swap_model.visualise_pdf_for_example(example_deltas_batch, example_target_zetas_batch, 360)
             for pdf in pdfs:
                 axes_pdf[i_ss].plot(theta_axis.cpu().numpy(), pdf.cpu().numpy())
-                axes_pdf[i_ss].set_title(f'N = {ss}')
+            axes_pdf[i_ss].set_title(f'N = {set_size}')
 
             if swap_type == 'spike_and_slab':
                 for q in range(swap_model.generative_model.num_models):
@@ -325,84 +363,51 @@ for batch_N, batch_M, deltas_batch, errors_batch, batch_indices in dataset_gener
 
             else:
 
-                # if D == 2:
-                #     fig_surfaces = plt.figure(figsize = (50, 30))
+                try:
+                    display_pi_u_tilde = all_pi_u_tildes[t,:,i_ss]
+                    display_pi_1_tilde = all_pi_1_tildes[t,:,i_ss]
 
-                #     axcuedslices_linear = fig_surfaces.add_subplot(2,4,3)
-                #     axestimatedslices_linear = fig_surfaces.add_subplot(2,4,4)
-                #     axcuedslices_exponentiated = fig_surfaces.add_subplot(2,4,7)
-                #     axestimatedslices_exponentiated = fig_surfaces.add_subplot(2,4,8)
-                    
-                #     sliced_mean_surface_2D(
-                #         surface, full_grid, swap_type, dataset_generator.feature_names[0], dataset_generator.feature_names[1],
-                #         axcuedslices_linear, axestimatedslices_linear,
-                #         axcuedslices_exponentiated, axestimatedslices_exponentiated,
-                #         min_seperations[set_size], max_separations[set_size]
-                #     )
+                    fig_surfaces, fig_surfaces_num_rows, fig_surfaces_num_cols = swap_model.visualise_variational_approximation(
+                        set_size = set_size, grid_count = grid_count,
+                        pi_u_tildes = display_pi_u_tilde, pi_1_tildes = display_pi_1_tilde, 
+                        all_deltas = dataset_generator.data_generators[set_size].all_deltas[...,delta_dimensions].cpu().numpy(),
+                        recent_component_priors = recent_component_priors.get(set_size), true_mean_surface = true_mean_surfaces_dict[set_size], true_std_surface = true_std_surfaces_dict[set_size],
+                        min_separation= [min_separations[set_size][d] for d in delta_dimensions],
+                        max_separation= [max_separations[set_size][d] for d in delta_dimensions],
+                        deltas_label = [dataset_generator.feature_names[d] for d in delta_dimensions]
+                    )
 
-                #     ax3d_linear = fig_surfaces.add_subplot(2,4,1, projection='3d')
-                #     ax3d_exponentiated = fig_surfaces.add_subplot(2,4,5, projection='3d')
-                #     axheat_linear = fig_surfaces.add_subplot(2,4,2, aspect=1.0)
-                #     axheat_exponentiated = fig_surfaces.add_subplot(2,4,6, aspect=1.0)
+                    if track_fmse:
+                        fig_surfaces_spec = gridspec.GridSpec(fig_surfaces_num_rows, fig_surfaces_num_cols, fig_surfaces)
+                        fmse_axes = fig_surfaces.add_subplot(fig_surfaces_spec[-1,-2:])
+                        fmse_axes.plot(test_save_steps, all_scaled_rmse_from_true_confusion_function[:len(test_save_steps),:,iN], label = 'Avg. Wass distance of $p(f)$ marginals', color = 'blue')
 
-                #     inducing_points = variational_model.Z.detach().cpu().T
+                    fig_surfaces.savefig(os.path.join(logging_directory, f'function_surface_{t}_{set_size}.png'))
+                
+                except torch._C._LinAlgError as e:
+                    print("Error while displaying swap function!")
+                    print(e)
 
-                #     mean_and_variance_surface_2D(
-                #         fig_surfaces, ax3d_linear, ax3d_exponentiated, axheat_linear, axheat_exponentiated, inducing_points,
-                #         grid_x, grid_y, surface, upper_error_surface, lower_error_surface, 
-                #         dataset_generator.feature_names[0], dataset_generator.feature_names[1]
-                #     )                    
-
-                # elif D == 1:
-
-                display_pi_u_tilde = all_pi_u_tildes[t,:,i_ss]
-                display_pi_1_tilde = all_pi_1_tildes[t,:,i_ss]
-
-                fig_surfaces = swap_model.visualise_variational_approximation(
-                    pi_u_tildes = display_pi_u_tilde, pi_1_tildes = display_pi_1_tilde, 
-                    all_deltas = dataset_generator.data_generators[set_size].all_deltas[...,delta_dimensions].cpu().numpy(),
-                    recent_component_priors = recent_component_priors.get(set_size), true_mean_surface = true_mean_surfaces_dict[set_size], true_std_surface = true_std_surfaces_dict[set_size],
-                    min_separation= min_seperations[set_size][delta_dimensions[0]], max_separation=max_separations[set_size][delta_dimensions[0]],
-                    deltas_label = dataset_generator.feature_names[delta_dimensions[0]]
-                )
-
-                fig_surfaces.savefig(os.path.join(logging_directory, f'function_surface_{t}_{set_size}.png'))
 
         fig_pdf.savefig(os.path.join(logging_directory, 'example_full_distribution.png'))
         #############################################
 
+    #############################################
     elapsed_string, remaining_string = timer.loop_end()
-    with open(print_path, 'a') as f:
-
-        batch_N_index = all_set_sizes.index(batch_N)
-        
+    with open(training_print_path, 'a') as f:
         new_print_row = [
-            f"{t + 1}/{T}",
-            batch_N,
-            round(all_average_elbos_per_set_size[t,:,batch_N_index].mean(), 6),
-            round(all_average_llh_losses_per_set_size[t,:,batch_N_index].mean(), 6),
-            round(all_kl_losses_per_set_size[t,:,batch_N_index].mean(), 6),
-            round(all_dist_losses_per_set_size[t,:,batch_N_index].mean(), 6),
-            round(total_test_llh / total_test_count, 6),
+            f"{t + 1}/{T}",                                                                 # Progress
+            batch_N,                                                                        # batch_N
+            round(all_average_elbos_per_set_size[t,:,batch_N_index].mean(), 6),             # avg_total_elbo
+            round(all_average_llh_losses_per_set_size[t,:,batch_N_index].mean(), 6),        # avg_llh_term
+            round(all_kl_losses_per_set_size[t,:,batch_N_index].mean(), 6),                 # kl_term
+            round(all_dist_losses_per_set_size[t,:,batch_N_index].mean(), 6),               # distance_loss
         ]
-
-        new_print_row.extend([
-            elapsed_string, remaining_string
-        ])
-
+        new_print_row.extend([elapsed_string, remaining_string])
         print(*new_print_row, sep = '\t', file=f)
+    #############################################
 
-    if M_batch < 1:
+        if early_stopper.advise(t):
+            print('Stopping early', file=f)
+            break
 
-        recent_losses = {
-            "residual_distribution": {
-                "recent_naive_llh": recent_naive_llh,
-                "recent_importance_sampled_llh": recent_importance_sampled_llh,
-                "particle_non_uniforn_weights": recent_particle_non_uniform_weights,
-                "particle_uniform_weights": recent_particle_uniform_weights,
-                "particle_mean_first_resultant_vector_lengths": recent_particle_mean_first_resultant_vector_lengths,
-                "particle_circular_kurtosis": recent_particle_circular_kurtosis
-            },
-        }
-
-        np.save(os.path.join(logging_directory, "recent_losses.npy"), recent_losses)

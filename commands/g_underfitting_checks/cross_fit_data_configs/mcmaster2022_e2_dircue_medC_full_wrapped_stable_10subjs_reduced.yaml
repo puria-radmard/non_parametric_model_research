@@ -1,0 +1,11 @@
+num_training_examples: 1000
+discard_last_n_training_examples: 864
+dataset_name: cross_model_fit
+underlying_dataset: mcmaster2022_e2_dircue
+synthetic_data_code: single_subject_cross_fit
+synthetic_data_root: /homes/pr450/repos/research_projects/error_modelling_torus/results_link/fc_subject_aggregated_summaries_7_10_24/mcmaster2022_e2_dircue_medC
+ 
+stim_strengths:
+- medC
+M_test_per_set_size: 0
+

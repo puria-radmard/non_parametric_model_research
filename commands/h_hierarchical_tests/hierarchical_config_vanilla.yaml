@@ -1,0 +1,5 @@
+separation_metadata_name: subject_idx
+num_models: 1
+inducing_point_variational_submodel_parameterisation_type: 'vanilla'
+M_batch_mini: 24
+lr: 0.01

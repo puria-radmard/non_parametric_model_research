@@ -1,0 +1,7 @@
+swap_type: spike_and_slab
+emission_type: wrapped_stable
+remove_uniform: true
+include_pi_u_tilde: false
+num_models: 16
+run_name: spike_and_slab_wrapped_stable
+num_training_examples: 500

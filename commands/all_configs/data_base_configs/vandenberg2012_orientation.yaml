@@ -1,0 +1,7 @@
+dataset_name: vandenberg2012_orientation
+fix_inducing_point_locations: true
+M_test_per_set_size: 0
+M_batch: 1048
+logging_frequency: 200
+testing_frequency: 200
+num_training_examples: 101

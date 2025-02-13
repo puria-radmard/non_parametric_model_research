@@ -1,0 +1,5 @@
+dataset_name: mcmaster2022_e1_loccue
+stim_strengths:
+- cue_AR1
+M_test_per_set_size: 0
+

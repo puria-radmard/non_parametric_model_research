@@ -1,0 +1,9 @@
+swap_type: full
+emission_type: double_von_mises
+remove_uniform: true
+include_pi_u_tilde: false
+num_models: 16
+run_name: full_double_von_mises
+init_min_seps: false
+num_training_examples: 500
+R_per_dim: 12

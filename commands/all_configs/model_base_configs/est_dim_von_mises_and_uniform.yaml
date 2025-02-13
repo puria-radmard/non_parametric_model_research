@@ -1,0 +1,9 @@
+swap_type: est_dim_only
+emission_type: von_mises
+remove_uniform: false
+include_pi_u_tilde: true
+num_models: 16
+run_name: est_dim_von_mises_and_uniform
+init_min_seps: false
+num_training_examples: 500
+R_per_dim: 12

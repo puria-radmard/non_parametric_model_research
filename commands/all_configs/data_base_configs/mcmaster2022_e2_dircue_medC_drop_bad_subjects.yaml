@@ -1,0 +1,6 @@
+dataset_name: mcmaster2022_e2_dircue
+stim_strengths:
+- medC
+M_test_per_set_size: 0
+drop_metadata_values:
+  - 8

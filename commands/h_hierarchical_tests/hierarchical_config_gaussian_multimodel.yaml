@@ -1,0 +1,6 @@
+# At the moment only used for fitting to synthetic data!
+separation_metadata_name: subject_idx
+num_models: 16
+inducing_point_variational_submodel_parameterisation_type: 'gaussian'
+M_batch_mini: 24
+lr: 0.05

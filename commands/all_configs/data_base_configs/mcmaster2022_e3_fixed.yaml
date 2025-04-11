@@ -1,0 +1,6 @@
+dataset_name: mcmaster2022_e3
+loc_type: fixed
+M_test_per_set_size: 0
+M_batch: 512
+logging_frequency: 200
+testing_frequency: 50000000000

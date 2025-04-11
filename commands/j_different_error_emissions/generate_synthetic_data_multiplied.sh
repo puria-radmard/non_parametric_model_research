@@ -4,6 +4,7 @@ export data_name=$2             # e.g. mcmaster2022_e1_oricue_cue_AR2_drop_bad_s
 export variational_parameterisation=$3      # e.g. gaussian
 export swap_function_multiplier=$4      # e.g. 1.5
 export cuda_device=$5                       # e.g. 1
+export extra_args="${@:6}"  # e.g. --swap_dimensions
 
 export CUDA_VISIBLE_DEVICES=$cuda_device
 
@@ -35,6 +36,7 @@ export cmd="python ${cmd_path} \
     --data_output_path ${synthetic_data_path}
     --swap_function_multiplier ${swap_function_multiplier}
     --allow_model_drop
+    ${extra_args}
 "
 
 $cmd
@@ -44,8 +46,40 @@ $cmd
 # non_parametric_model/commands/j_different_error_emissions/generate_synthetic_data_multiplied.sh est_dim_von_mises_and_uniform mcmaster2022_e2_dircue_medC gaussian 2.5 0
 # non_parametric_model/commands/j_different_error_emissions/generate_synthetic_data_multiplied.sh cue_dim_von_mises_and_uniform mcmaster2022_e2_dircue_medC gaussian 1.5 0
 # non_parametric_model/commands/j_different_error_emissions/generate_synthetic_data_multiplied.sh cue_dim_von_mises_and_uniform mcmaster2022_e2_dircue_medC gaussian 2.5 0
-# non_parametric_model/commands/j_different_error_emissions/generate_synthetic_data_multiplied.sh est_dim_von_mises_and_uniform mcmaster2022_e1_oricue_cue_AR2 gaussian 1.5 0
-# non_parametric_model/commands/j_different_error_emissions/generate_synthetic_data_multiplied.sh est_dim_von_mises_and_uniform mcmaster2022_e1_oricue_cue_AR2 gaussian 2.5 0
-# non_parametric_model/commands/j_different_error_emissions/generate_synthetic_data_multiplied.sh cue_dim_von_mises_and_uniform mcmaster2022_e1_oricue_cue_AR2 gaussian 1.5 0
-# non_parametric_model/commands/j_different_error_emissions/generate_synthetic_data_multiplied.sh cue_dim_von_mises_and_uniform mcmaster2022_e1_oricue_cue_AR2 gaussian 2.5 0
 
+
+
+
+# non_parametric_model/commands/j_different_error_emissions/generate_synthetic_data_multiplied.sh cue_dim_von_mises_and_uniform mcmaster2022_e1_oricue_cue_AR2 gaussian 0.5 0
+# non_parametric_model/commands/j_different_error_emissions/generate_synthetic_data_multiplied.sh cue_dim_von_mises_and_uniform mcmaster2022_e1_oricue_cue_AR2 gaussian 1.0 0
+# non_parametric_model/commands/j_different_error_emissions/generate_synthetic_data_multiplied.sh cue_dim_von_mises_and_uniform mcmaster2022_e1_oricue_cue_AR2 gaussian 1.5 0
+# non_parametric_model/commands/j_different_error_emissions/generate_synthetic_data_multiplied.sh cue_dim_von_mises_and_uniform mcmaster2022_e1_oricue_cue_AR2 gaussian 2.0 0
+# non_parametric_model/commands/j_different_error_emissions/generate_synthetic_data_multiplied.sh cue_dim_von_mises_and_uniform mcmaster2022_e1_oricue_cue_AR2 gaussian 2.5 0
+# non_parametric_model/commands/j_different_error_emissions/generate_synthetic_data_multiplied.sh cue_dim_von_mises_and_uniform mcmaster2022_e1_oricue_cue_AR2 gaussian -0.5 0
+# non_parametric_model/commands/j_different_error_emissions/generate_synthetic_data_multiplied.sh cue_dim_von_mises_and_uniform mcmaster2022_e1_oricue_cue_AR2 gaussian -1.0 0
+# non_parametric_model/commands/j_different_error_emissions/generate_synthetic_data_multiplied.sh cue_dim_von_mises_and_uniform mcmaster2022_e1_oricue_cue_AR2 gaussian -1.5 0
+
+
+# non_parametric_model/commands/j_different_error_emissions/generate_synthetic_data_multiplied.sh cue_dim_von_mises_and_uniform mcmaster2022_e1_oricue_cue_AR2 gaussian 0.5 0 --swap_dimensions
+# non_parametric_model/commands/j_different_error_emissions/generate_synthetic_data_multiplied.sh cue_dim_von_mises_and_uniform mcmaster2022_e1_oricue_cue_AR2 gaussian 1.0 0 --swap_dimensions
+# non_parametric_model/commands/j_different_error_emissions/generate_synthetic_data_multiplied.sh cue_dim_von_mises_and_uniform mcmaster2022_e1_oricue_cue_AR2 gaussian 1.5 0 --swap_dimensions
+# non_parametric_model/commands/j_different_error_emissions/generate_synthetic_data_multiplied.sh cue_dim_von_mises_and_uniform mcmaster2022_e1_oricue_cue_AR2 gaussian 2.0 0 --swap_dimensions
+# non_parametric_model/commands/j_different_error_emissions/generate_synthetic_data_multiplied.sh cue_dim_von_mises_and_uniform mcmaster2022_e1_oricue_cue_AR2 gaussian 2.5 0 --swap_dimensions
+# non_parametric_model/commands/j_different_error_emissions/generate_synthetic_data_multiplied.sh cue_dim_von_mises_and_uniform mcmaster2022_e1_oricue_cue_AR2 gaussian -0.5 0 --swap_dimensions
+# non_parametric_model/commands/j_different_error_emissions/generate_synthetic_data_multiplied.sh cue_dim_von_mises_and_uniform mcmaster2022_e1_oricue_cue_AR2 gaussian -1.0 0 --swap_dimensions
+# non_parametric_model/commands/j_different_error_emissions/generate_synthetic_data_multiplied.sh cue_dim_von_mises_and_uniform mcmaster2022_e1_oricue_cue_AR2 gaussian -1.5 0 --swap_dimensions
+
+
+# non_parametric_model/commands/j_different_error_emissions/generate_synthetic_data_multiplied.sh cue_dim_von_mises_and_uniform mcmaster2022_e1_oricue_cue_AR2 gaussian 0.5 1 --duplicate_dimension 0
+# non_parametric_model/commands/j_different_error_emissions/generate_synthetic_data_multiplied.sh cue_dim_von_mises_and_uniform mcmaster2022_e1_oricue_cue_AR2 gaussian 1.0 1 --duplicate_dimension 0
+# non_parametric_model/commands/j_different_error_emissions/generate_synthetic_data_multiplied.sh cue_dim_von_mises_and_uniform mcmaster2022_e1_oricue_cue_AR2 gaussian 1.5 1 --duplicate_dimension 0
+# non_parametric_model/commands/j_different_error_emissions/generate_synthetic_data_multiplied.sh cue_dim_von_mises_and_uniform mcmaster2022_e1_oricue_cue_AR2 gaussian 2.0 1 --duplicate_dimension 0
+# non_parametric_model/commands/j_different_error_emissions/generate_synthetic_data_multiplied.sh cue_dim_von_mises_and_uniform mcmaster2022_e1_oricue_cue_AR2 gaussian 2.5 1 --duplicate_dimension 0
+# non_parametric_model/commands/j_different_error_emissions/generate_synthetic_data_multiplied.sh cue_dim_von_mises_and_uniform mcmaster2022_e1_oricue_cue_AR2 gaussian -0.5 1 --duplicate_dimension 0
+# non_parametric_model/commands/j_different_error_emissions/generate_synthetic_data_multiplied.sh cue_dim_von_mises_and_uniform mcmaster2022_e1_oricue_cue_AR2 gaussian -1.0 1 --duplicate_dimension 0
+# non_parametric_model/commands/j_different_error_emissions/generate_synthetic_data_multiplied.sh cue_dim_von_mises_and_uniform mcmaster2022_e1_oricue_cue_AR2 gaussian -1.5 1 --duplicate_dimension 0
+
+
+# non_parametric_model/commands/j_different_error_emissions/generate_synthetic_data_multiplied.sh cue_dim_von_mises_and_uniform mcmaster2022_e1_oricue_cue_AR2 gaussian 0.5 1 --duplicate_dimension 0 --num_underlying_data_duplications 10
+# non_parametric_model/commands/j_different_error_emissions/generate_synthetic_data_multiplied.sh cue_dim_von_mises_and_uniform mcmaster2022_e1_oricue_cue_AR2 gaussian 1.0 1 --duplicate_dimension 0 --num_underlying_data_duplications 10
+# non_parametric_model/commands/j_different_error_emissions/generate_synthetic_data_multiplied.sh cue_dim_von_mises_and_uniform mcmaster2022_e1_oricue_cue_AR2 gaussian 2.0 1 --duplicate_dimension 0 --num_underlying_data_duplications 10

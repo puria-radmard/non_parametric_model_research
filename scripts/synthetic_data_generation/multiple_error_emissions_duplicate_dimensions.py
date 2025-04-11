@@ -31,7 +31,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--resume_path', type = str)
 parser.add_argument('--num_synthetic_generation_repeats', type = int, required = True)
 parser.add_argument('--num_underlying_data_duplications', type = int, required = False, default = 1)
-parser.add_argument('--swap_function_multiplier', type = float, required = False, default = 1.0)        # --> didn't work in the end!
+parser.add_argument('--swap_function_addition', type = float, required = False, default = 1.0)        # --> didn't work in the end!
 parser.add_argument('--hierarchical_config_yaml', type = str, help="", required = False, default = "/homes/pr450/repos/research_projects/error_modelling_torus/non_parametric_model/commands/h_hierarchical_tests/hierarchical_config_gaussian.yaml")
 parser.add_argument('--data_output_path', type = str, help = 'Since we are not using one model, we need an output math for the data! It will include signatures back to the models used')
 parser.add_argument('--allow_model_drop', action = 'store_true')
@@ -47,9 +47,11 @@ dataset_generator = load_experimental_data(args.dataset_name, args.train_indices
 all_set_sizes = list(dataset_generator.data_generators.keys())
 
 
-synthetic_tag = 'different_error_emissions' + ('' if data_gen_args.num_underlying_data_duplications == 1 else f'_times{data_gen_args.num_underlying_data_duplications}')
-if data_gen_args.swap_function_multiplier != 1.0:
-    synthetic_tag += f'_mult{data_gen_args.swap_function_multiplier}'
+synthetic_tag = ''
+if data_gen_args.num_underlying_data_duplications != 1:
+    synthetic_tag += f'_times{data_gen_args.num_underlying_data_duplications}'
+if data_gen_args.swap_function_addition != 0.0:
+    synthetic_tag += f'_add{data_gen_args.swap_function_addition}'
 
 dataset_generator.duplicate_underlying_data(data_gen_args.num_underlying_data_duplications)
 
@@ -91,9 +93,9 @@ swap_model.cuda()
 
 data_output_path = data_gen_args.data_output_path
 Path(data_output_path).mkdir(parents=True, exist_ok=True)
-data_destination = os.path.join(data_output_path, f'synthetic_data_different_error_emissions_swap_dimensions.npy')
-config_yaml_destination = os.path.join(data_output_path, f'synthetic_data_args.yaml')
-training_yaml_destination = os.path.join(data_output_path, f'synthetic_data_training_args.yaml')
+data_destination = os.path.join(data_output_path, f'synthetic_data_different_error_emissions_duplicate_dimensions{synthetic_tag}.npy')
+config_yaml_destination = os.path.join(data_output_path, f'synthetic_data_args{synthetic_tag}.yaml')
+training_yaml_destination = os.path.join(data_output_path, f'synthetic_data_training_args{synthetic_tag}.yaml')
 
 
 assert resume_path is not None
@@ -101,8 +103,7 @@ assert resume_path is not None
 
 for dest in [data_destination, config_yaml_destination]:
     if os.path.exists(dest):
-        print('Cannot overwrite data! ' + dest)
-        # raise Exception('Cannot overwrite data! ' + dest)
+        raise Exception('Cannot overwrite data! ' + dest)
 
 
 dataset_sizes = {N: dg.all_deltas.shape[0] for N, dg in dataset_generator.data_generators.items()}
@@ -150,7 +151,7 @@ with torch.no_grad():
                 # elbo_information_original.mean_surface[...,1:].min()
                 # dim_duped_mean_surface[...,1:].min()
 
-                dim_duped_mean_surface = data_gen_args.swap_function_multiplier * (
+                dim_duped_mean_surface = data_gen_args.swap_function_addition + (
                     elbo_information_original.mean_surface + elbo_information_other.mean_surface
                 ) / mean_at_zero
                 new_std_function_eval = elbo_information_original.std_surface
@@ -159,7 +160,7 @@ with torch.no_grad():
                 all_f_samples = [
                     swap_model.get_variational_model(set_size).reparameterised_sample(
                         num_samples = swap_model.num_variational_samples,
-                        mu = data_gen_args.swap_function_multiplier * (mu + mu_other) / mean_at_zero, 
+                        mu = data_gen_args.swap_function_addition + (mu + mu_other) / mean_at_zero, 
                         sigma_chol = sigma_chol,
                         M = M, N = set_size
                     )
@@ -208,11 +209,10 @@ training_yaml_info = {
     'dataset_name': 'cross_model_fit',
     'underlying_dataset': args.dataset_name,
     'synthetic_data_root': str(Path(data_output_path).parent.absolute()),
-    'synthetic_data_code': 'different_error_emissions_swap_dimensions',
+    'synthetic_data_code': f'different_error_emissions_duplicate_dimensions{synthetic_tag}',
     'num_underlying_data_duplications': data_gen_args.num_underlying_data_duplications,
-    'generation_path': resume_path
+    'generation_path': resume_path,
+    'swap_function_addition': data_gen_args.swap_function_addition,
 }
 
 ConfigNamepace(training_yaml_info).write_to_yaml(training_yaml_destination)
-
-

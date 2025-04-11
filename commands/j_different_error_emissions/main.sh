@@ -37,7 +37,6 @@ $pypath -m non_parametric_model.scripts.different_error_emissions.training \
 
 
 
-
 # non_parametric_model/commands/j_different_error_emissions/main.sh full_von_mises_and_uniform mcmaster2022_e2_dircue_medC gaussian 0
 # non_parametric_model/commands/j_different_error_emissions/main.sh full_von_mises_and_uniform mcmaster2022_e1_oricue_cue_AR2 gaussian 0
 # non_parametric_model/commands/j_different_error_emissions/main.sh cue_dim_von_mises_and_uniform mcmaster2022_e2_dircue_medC gaussian 1
@@ -68,8 +67,8 @@ $pypath -m non_parametric_model.scripts.different_error_emissions.training \
 
 ####### XXX ####### XXX ####### XXX ####### XXX ####### XXX ####### XXX ####### XXX ####### XXX ####### XXX ####### XXX 
 
-# non_parametric_model/commands/j_different_error_emissions/main.sh full_von_mises_and_uniform mcmaster2022_e2_dircue_highC gaussian 0
-# non_parametric_model/commands/j_different_error_emissions/main.sh no_dim_von_mises_and_uniform mcmaster2022_e2_dircue_highC gaussian 0
+# non_parametric_model/commands/j_different_error_emissions/main.sh full_von_mises_and_uniform mcmaster2022_e2_dircue_highC gaussian 1
+# non_parametric_model/commands/j_different_error_emissions/main.sh no_dim_von_mises_and_uniform mcmaster2022_e2_dircue_highC gaussian 1
 # non_parametric_model/commands/j_different_error_emissions/main.sh cue_dim_von_mises_and_uniform mcmaster2022_e2_dircue_highC gaussian 1
 # non_parametric_model/commands/j_different_error_emissions/main.sh est_dim_von_mises_and_uniform mcmaster2022_e2_dircue_highC gaussian 1
 
@@ -85,10 +84,26 @@ $pypath -m non_parametric_model.scripts.different_error_emissions.training \
 # non_parametric_model/commands/j_different_error_emissions/main.sh cue_dim_von_mises_and_uniform mcmaster2022_e1_oricue_cue_AR1 gaussian 1
 # non_parametric_model/commands/j_different_error_emissions/main.sh est_dim_von_mises_and_uniform mcmaster2022_e1_oricue_cue_AR1 gaussian 1
 
-# non_parametric_model/commands/j_different_error_emissions/main.sh cue_dim_von_mises_and_uniform mcmaster2022_e1_oricue_cue_AR3 gaussian 1
-# non_parametric_model/commands/j_different_error_emissions/main.sh est_dim_von_mises_and_uniform mcmaster2022_e1_oricue_cue_AR3 gaussian 1
+# non_parametric_model/commands/j_different_error_emissions/main.sh cue_dim_von_mises_and_uniform mcmaster2022_e1_oricue_cue_AR3 gaussian 0
+# non_parametric_model/commands/j_different_error_emissions/main.sh est_dim_von_mises_and_uniform mcmaster2022_e1_oricue_cue_AR3 gaussian 0
 # non_parametric_model/commands/j_different_error_emissions/main.sh full_von_mises_and_uniform mcmaster2022_e1_oricue_cue_AR3 gaussian 0
 # non_parametric_model/commands/j_different_error_emissions/main.sh no_dim_von_mises_and_uniform mcmaster2022_e1_oricue_cue_AR3 gaussian 0
+
+
+
+
+# rand, fixed, rot
+
+# non_parametric_model/commands/j_different_error_emissions/main.sh no_dim_von_mises_and_uniform mcmaster2022_e3_rand gaussian 0
+# non_parametric_model/commands/j_different_error_emissions/main.sh cue_dim_wrapped_stable mcmaster2022_e3_rand gaussian 0
+# non_parametric_model/commands/j_different_error_emissions/main.sh no_dim_wrapped_stable mcmaster2022_e3_rand gaussian 1
+# non_parametric_model/commands/j_different_error_emissions/main.sh est_dim_wrapped_stable mcmaster2022_e3_rand gaussian 1
+# non_parametric_model/commands/j_different_error_emissions/main.sh full_von_mises_and_uniform mcmaster2022_e3_rand gaussian 1
+# non_parametric_model/commands/j_different_error_emissions/main.sh cue_dim_von_mises_and_uniform mcmaster2022_e3_rand gaussian 1
+# non_parametric_model/commands/j_different_error_emissions/main.sh full_wrapped_stable mcmaster2022_e3_rand gaussian 0
+# non_parametric_model/commands/j_different_error_emissions/main.sh est_dim_von_mises_and_uniform mcmaster2022_e3_rand gaussian 0
+
+
 
 
 

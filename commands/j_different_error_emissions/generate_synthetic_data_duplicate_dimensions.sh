@@ -2,7 +2,8 @@
 export model_name=$1            # e.g. full_von_mises_and_uniform
 export data_name=$2             # e.g. mcmaster2022_e1_oricue_cue_AR2_drop_bad_subjects
 export variational_parameterisation=$3      # e.g. gaussian
-export cuda_device=$4                       # e.g. 1
+export swap_function_addition=$4
+export cuda_device=$5                       # e.g. 1
 
 export CUDA_VISIBLE_DEVICES=$cuda_device
 
@@ -30,11 +31,17 @@ export cmd="python ${cmd_path} \
     --num_synthetic_generation_repeats 16
     --hierarchical_config_yaml ${hierarchical_config_yaml}
     --data_output_path ${synthetic_data_path}
+    --swap_function_addition ${swap_function_addition}
     --allow_model_drop
 "
 
 $cmd
 
 
-# non_parametric_model/commands/j_different_error_emissions/generate_synthetic_data_duplicate_dimensions.sh cue_dim_von_mises_and_uniform mcmaster2022_e2_dircue_medC gaussian 0
-# non_parametric_model/commands/j_different_error_emissions/generate_synthetic_data_duplicate_dimensions.sh cue_dim_von_mises_and_uniform mcmaster2022_e1_oricue_cue_AR2 gaussian 0
+# non_parametric_model/commands/j_different_error_emissions/generate_synthetic_data_duplicate_dimensions.sh cue_dim_von_mises_and_uniform mcmaster2022_e1_oricue_cue_AR2 gaussian 0.0 0
+
+# non_parametric_model/commands/j_different_error_emissions/generate_synthetic_data_duplicate_dimensions.sh cue_dim_von_mises_and_uniform mcmaster2022_e1_oricue_cue_AR2 gaussian 0.5 0
+# non_parametric_model/commands/j_different_error_emissions/generate_synthetic_data_duplicate_dimensions.sh cue_dim_von_mises_and_uniform mcmaster2022_e1_oricue_cue_AR2 gaussian -0.5 0
+# non_parametric_model/commands/j_different_error_emissions/generate_synthetic_data_duplicate_dimensions.sh cue_dim_von_mises_and_uniform mcmaster2022_e1_oricue_cue_AR2 gaussian 1.0 0
+# non_parametric_model/commands/j_different_error_emissions/generate_synthetic_data_duplicate_dimensions.sh cue_dim_von_mises_and_uniform mcmaster2022_e1_oricue_cue_AR2 gaussian -1.0 0
+

@@ -1,5 +1,5 @@
 dataset_name: mcmaster2022_e2_dircue
 stim_strengths:
-- highC
+- lowC
 M_test_per_set_size: 0
 

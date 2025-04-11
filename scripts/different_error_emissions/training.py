@@ -143,11 +143,23 @@ for batch_N, batch_M, deltas_batch, errors_batch, metadata_batch, batch_indices 
                 all_dataset_relevant_deltas = dg.all_deltas[all_eek_indices][...,delta_dimensions].unsqueeze(0).repeat(swap_model.num_models, 1, 1, 1).to('cuda')    # [Q, M_s, N, D]
 
                 with torch.no_grad():
-                    test_time_inference_info = swap_model.get_elbo_terms(testing_eek, all_dataset_relevant_deltas, all_dataset_errors, max_variational_batch_size=MINIBATCH_SIZE, return_kl=False)
+                    try:
+                        all_test_time_inference_info = swap_model.get_elbo_terms(testing_eek, all_dataset_relevant_deltas, all_dataset_errors, max_variational_batch_size=MINIBATCH_SIZE, return_kl=False)
+                    except:
+                        mb_slices = [slice(i * M_batch, (i+1) * M_batch) for i in range(all_dataset_relevant_deltas.shape[1] // M_batch + int(all_dataset_relevant_deltas.shape[1] % M_batch > 0))]
 
-                all_likelihoods_per_datapoint[:,all_eek_indices] = test_time_inference_info['likelihood_per_datapoint'].to(all_likelihoods_per_datapoint.dtype).detach().cpu()         # each [Q, M_s]
-                recent_naive_log_likelihoods[set_size][testing_eek] = test_time_inference_info['likelihood_per_datapoint'].detach().cpu().numpy()
-                recent_component_priors[set_size].append(test_time_inference_info['priors'].cpu().numpy())
+                        all_test_time_inference_info = {'likelihood_per_datapoint': [], 'priors': []}
+                        
+                        for mb_slice in mb_slices:
+                            test_time_inference_info = swap_model.get_elbo_terms(testing_eek, all_dataset_relevant_deltas[:,mb_slice], all_dataset_errors[:,mb_slice], max_variational_batch_size=MINIBATCH_SIZE, return_kl=False)
+                            [all_test_time_inference_info[k].append(test_time_inference_info[k]) for k in all_test_time_inference_info.keys()]
+                        
+                        for k in all_test_time_inference_info.keys():
+                            all_test_time_inference_info[k] = torch.concat(all_test_time_inference_info[k], 1)
+
+                all_likelihoods_per_datapoint[:,all_eek_indices] = all_test_time_inference_info['likelihood_per_datapoint'].to(all_likelihoods_per_datapoint.dtype).detach().cpu()         # each [Q, M_s]
+                recent_naive_log_likelihoods[set_size][testing_eek] = all_test_time_inference_info['likelihood_per_datapoint'].detach().cpu().numpy()
+                recent_component_priors[set_size].append(all_test_time_inference_info['priors'].cpu().numpy())
             
             recent_component_priors[set_size] = np.concatenate(recent_component_priors[set_size], 1)
 
